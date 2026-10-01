@@ -17,12 +17,13 @@ CREATE TABLE IF NOT EXISTS tracks (
 );
 CREATE TABLE IF NOT EXISTS sections (
   id INTEGER PRIMARY KEY AUTOINCREMENT, track_id TEXT NOT NULL, title TEXT NOT NULL,
-  difficulty TEXT NOT NULL DEFAULT 'MEDIUM', sort INTEGER NOT NULL DEFAULT 0
+  difficulty TEXT NOT NULL DEFAULT 'MEDIUM', sort INTEGER NOT NULL DEFAULT 0,
+  optional INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS topics (
   id INTEGER PRIMARY KEY AUTOINCREMENT, track_id TEXT NOT NULL, section_id INTEGER NOT NULL,
   title TEXT NOT NULL, difficulty TEXT NOT NULL DEFAULT 'MEDIUM', sort INTEGER NOT NULL DEFAULT 0,
-  done_date TEXT, done_at INTEGER
+  done_date TEXT, done_at INTEGER, optional INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS topics_track ON topics(track_id, sort);
 CREATE INDEX IF NOT EXISTS topics_done ON topics(done_date);
@@ -95,7 +96,13 @@ class Store {
     const buf = filePath && fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
     const store = new Store(new SQL.Database(buf), filePath);
     store.db.exec(SCHEMA);
-    if (seed && !store.get('SELECT 1 AS x FROM tracks LIMIT 1')) store.seed(seed, seedDate);
+    store.migrate();
+    if (seed && !store.get('SELECT 1 AS x FROM tracks LIMIT 1')) {
+      store.seed(seed, seedDate);
+      store.kvSet('seedVersion', seed.version || 1);
+    } else if (seed) {
+      store.refreshSeed(seed);
+    }
     return store;
   }
 
@@ -141,6 +148,29 @@ class Store {
       [key, JSON.stringify(value)]);
   }
 
+  // Adds columns introduced after a database was first created.
+  migrate() {
+    for (const table of ['sections', 'topics']) {
+      const cols = this.all(`PRAGMA table_info(${table})`).map((c) => c.name);
+      if (!cols.includes('optional')) this.db.run(`ALTER TABLE ${table} ADD COLUMN optional INTEGER NOT NULL DEFAULT 0`);
+    }
+  }
+
+  // When the bundled curriculum changes, replace the topics of seeded tracks
+  // that have no progress yet. Tracks with progress are left alone.
+  refreshSeed(seed) {
+    const version = seed.version || 1;
+    if (this.kvGet('seedVersion', 1) >= version) return;
+    for (const t of seed.tracks) {
+      if (t.kind === 'count' || !this.track(t.id)) continue;
+      if (this.get('SELECT COUNT(*) AS n FROM topics WHERE track_id = ? AND done_date IS NOT NULL', [t.id]).n > 0) continue;
+      this.db.run('DELETE FROM topics WHERE track_id = ?', [t.id]);
+      this.db.run('DELETE FROM sections WHERE track_id = ?', [t.id]);
+      this.addSections(t.id, t.sections);
+    }
+    this.kvSet('seedVersion', version);
+  }
+
   // --- settings & state ----------------------------------------------------
   getSettings() { return mergeDeep(DEFAULT_SETTINGS, this.kvGet('settings', {})); }
   setSettings(patch) {
@@ -177,16 +207,17 @@ class Store {
     let tSort = this.get('SELECT COALESCE(MAX(sort), -1) + 1 AS n FROM topics WHERE track_id = ?', [trackId]).n;
     for (const s of sections) {
       const diff = (s.difficulty || 'MEDIUM').toUpperCase();
-      this.db.run('INSERT INTO sections (track_id, title, difficulty, sort) VALUES (?,?,?,?)',
-        [trackId, s.title, diff, sSort++]);
+      const optional = s.optional ? 1 : 0;
+      this.db.run('INSERT INTO sections (track_id, title, difficulty, sort, optional) VALUES (?,?,?,?,?)',
+        [trackId, s.title, diff, sSort++, optional]);
       const sectionId = this.lastId();
       for (const topic of s.topics) {
         let title = typeof topic === 'string' ? topic : topic.title;
         let tDiff = typeof topic === 'string' ? null : topic.difficulty;
         const tag = title.match(/\s*\[(EASY|MEDIUM|HARD)\]\s*$/i);
         if (tag) { title = title.slice(0, tag.index); tDiff = tag[1].toUpperCase(); }
-        this.db.run('INSERT INTO topics (track_id, section_id, title, difficulty, sort) VALUES (?,?,?,?,?)',
-          [trackId, sectionId, title, tDiff || diff, tSort++]);
+        this.db.run('INSERT INTO topics (track_id, section_id, title, difficulty, sort, optional) VALUES (?,?,?,?,?,?)',
+          [trackId, sectionId, title, tDiff || diff, tSort++, optional]);
       }
     }
   }
@@ -278,7 +309,7 @@ class Store {
 
   remainingBefore(trackId, date) {
     return this.get(
-      'SELECT COUNT(*) AS n FROM topics WHERE track_id = ? AND (done_date IS NULL OR done_date >= ?)',
+      'SELECT COUNT(*) AS n FROM topics WHERE track_id = ? AND optional = 0 AND (done_date IS NULL OR done_date >= ?)',
       [trackId, date]
     ).n;
   }
@@ -286,7 +317,7 @@ class Store {
   // Completed counts keyed `${date}|${trackId}`.
   doneCounts(fromDate) {
     const map = new Map();
-    for (const r of this.all('SELECT done_date AS d, track_id AS t, COUNT(*) AS n FROM topics WHERE done_date >= ? GROUP BY d, t', [fromDate])) {
+    for (const r of this.all('SELECT done_date AS d, track_id AS t, COUNT(*) AS n FROM topics WHERE done_date >= ? AND optional = 0 GROUP BY d, t', [fromDate])) {
       map.set(`${r.d}|${r.t}`, r.n);
     }
     const apps = this.tracks().filter((t) => t.kind === 'count');

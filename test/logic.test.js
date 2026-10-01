@@ -27,7 +27,8 @@ test('seed loads the three tracks', async () => {
   const store = await freshStore();
   const snap = buildSnapshot(store, at('2026-10-01'));
   const byId = Object.fromEntries(snap.tracks.map((t) => [t.id, t]));
-  assert.equal(byId.ai.total, 190);
+  assert.equal(byId.ai.total, 196);
+  assert.equal(byId.ai.today[0].title, 'AdaBoost');
   assert.equal(byId.german.total, 105);
   assert.equal(byId.apps.kind, 'count');
   assert.equal(snap.punishment.level, 1);
@@ -136,4 +137,27 @@ test('alert tone escalates', () => {
   assert.match(punishment.alertMessage({ level: 1, today: t(600) }), /You got this/);
   assert.match(punishment.alertMessage({ level: 1, today: t(110, 0) }), /haven't started/);
   assert.match(punishment.alertMessage({ level: 2, today: t(-30) }), /FINISH YOUR TASKS/);
+});
+
+test('optional sections never count toward quotas or progress', async () => {
+  const store = await freshStore();
+  const now = at('2026-10-01');
+  let ai = buildSnapshot(store, now).tracks.find((t) => t.id === 'ai');
+  const css = ai.sections.find((s) => s.optional);
+  assert.equal(css.title, 'Section 53: CSS — Part 1');
+  assert.equal(ai.sections.filter((s) => s.optional).reduce((a, s) => a + s.total, 0), 44);
+  store.setTopicDone(css.topics[0].id, true, now);
+  ai = buildSnapshot(store, now).tracks.find((t) => t.id === 'ai');
+  assert.equal(ai.doneToday, 0);
+  assert.equal(ai.done, 0);
+  assert.ok(ai.today.every((t) => !t.title.startsWith('CSS')));
+});
+
+test('an older database without progress is re-seeded with the new curriculum', async () => {
+  const old = { version: 1, tracks: [{ id: 'ai', name: 'AI Course', kind: 'topics', sections: [{ title: 'Old', difficulty: 'EASY', topics: ['x'] }] }] };
+  const store = await Store.open(null, { seed: old, seedDate: '2026-09-01' });
+  store.refreshSeed(curriculum);
+  const ai = buildSnapshot(store, at('2026-10-01')).tracks.find((t) => t.id === 'ai');
+  assert.equal(ai.total, 196);
+  assert.equal(ai.sections[0].title, 'Section 34: Supervised ML (Part 6)');
 });

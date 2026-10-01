@@ -127,6 +127,7 @@ label.field > span { font-weight: 500; }
 .badge.EASY { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
 .badge.MEDIUM { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
 .badge.HARD { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.badge.OPTIONAL { color: var(--faint); border-style: dashed; }
 .badge.level-1 { color: var(--ok); }
 .badge.level-2 { color: var(--warn); border-color: var(--warn); }
 .badge.level-3 { color: #fff; background: var(--danger); border-color: var(--danger); }

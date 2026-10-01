@@ -65,7 +65,9 @@ When the app launches it checks yesterday right away, so Level 2/3 punishment sh
 `data/curriculum.js` is loaded on first run:
 
 - **German:** 105 topics across a diagnostic plus three phases (A2→B1, B1→B2, B2→C1), each with Grammatik / Lesen / Hören / Schreiben / Sprechen sections.
-- **AI course:** 190 topics in Sections 34–62. **These titles are placeholders.** The spec this was built from didn't include the real course list. Replace them in `data/curriculum.js` before first launch (or delete the database afterwards), or import your course PDF from the Import page.
+- **AI course:** Apna College, Sections 34–62. That's 196 core topics, starting at AdaBoost. The four CSS sections (53, 54, 58, 59; 44 lessons) are marked optional. They can be checked off but never count toward quotas, progress or finish dates.
+
+If you already ran an earlier version, seeded tracks with no progress are replaced with the new list automatically on next launch. A track you have already ticked topics in is left as-is; delete the database to start fresh.
 
 Mark a topic's difficulty with a trailing `[HARD]` / `[MEDIUM]` / `[EASY]`; otherwise it inherits its section's.
 

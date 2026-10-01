@@ -1,139 +1,114 @@
 // Seed curriculum loaded on first run.
 //
-// The AI course list is a stand-in for Sections 34–62 of your course: the spec
-// this was built from didn't include the real titles. Replace the sections
-// below with your course's real ones (keep the same shape), or use
-// Import → PDF in the app to load them from your course PDF.
+// AI course: Apna College, Sections 34–62 (the sections still ahead).
+// German: diagnostic + three phases, A2 → B1 → B2 → C1.
 //
-// Shape: { title, difficulty: 'EASY' | 'MEDIUM' | 'HARD', topics: [string] }
+// Shape: [title, difficulty: 'EASY' | 'MEDIUM' | 'HARD', topics: [string], options]
 // A topic can override its section difficulty with a trailing " [HARD]" etc.
+// Sections with { optional: true } can be checked off but never count toward
+// daily quotas, progress or projected finish dates.
+
+const lessons = (prefix, n) => Array.from({ length: n }, (_, i) => `${prefix} · Lesson ${i + 1}`);
+const OPTIONAL = { optional: true };
 
 const aiSections = [
-  ['Section 34: Neural Network Foundations', 'MEDIUM', [
-    'Perceptron and the biological neuron', 'Activation functions', 'Forward propagation',
-    'Loss functions for regression and classification', 'Gradient descent intuition',
-    'Backpropagation step by step [HARD]', 'Building a network from scratch in NumPy'
+  ['Section 34: Supervised ML (Part 6)', 'MEDIUM', [
+    'AdaBoost', 'XGBoost', 'Gradient Boosting', 'Boosting Wrap-up'
   ]],
-  ['Section 35: Training Deep Networks', 'MEDIUM', [
-    'Mini-batch and stochastic gradient descent', 'Momentum, RMSProp and Adam',
-    'Learning rate schedules', 'Weight initialization', 'Vanishing and exploding gradients',
-    'Batch normalization', 'Debugging training curves'
+  ['Section 35: Unsupervised ML (Part 1)', 'MEDIUM', [
+    'K-Means', 'Elbow Method', 'Silhouette Score', 'Clustering', 'Hierarchical Clustering', 'Dendrogram',
+    'Agglomerative Clustering', 'Clustering Project'
   ]],
-  ['Section 36: Regularization', 'MEDIUM', [
-    'Bias–variance trade-off', 'L1 and L2 regularization', 'Dropout', 'Early stopping',
-    'Data augmentation', 'Hyperparameter tuning strategies'
+  ['Section 36: Unsupervised ML (Part 2)', 'HARD', [
+    'PCA intro', 'PCA math', 'Dimensionality Reduction', 'DBSCAN intro', 'DBSCAN implementation', 'Anomaly Detection',
+    'Feature Encoding (One-Hot)', 'Feature Encoding (Label/Ordinal)', 'Feature Scaling', 'Feature Selection',
+    'Feature Engineering', 'Unsupervised ML Wrap-up'
   ]],
-  ['Section 37: PyTorch Essentials', 'EASY', [
-    'Tensors and operations', 'Autograd', 'nn.Module and layers', 'Datasets and DataLoaders',
-    'Training loop template', 'Saving and loading models', 'GPU training'
+  ['Section 37: Unsupervised ML / Project', 'MEDIUM', [
+    'Customer Profiling intro', 'Data Preparation', 'EDA', 'Clustering Analysis', 'Project Wrap-up'
   ]],
-  ['Section 38: TensorFlow & Keras', 'EASY', [
-    'Keras Sequential API', 'Functional API', 'Callbacks', 'tf.data pipelines',
-    'Custom training loops', 'TensorBoard'
+  ['Section 38: Linux & Terminal', 'EASY', [
+    'Terminal intro', 'Directories', 'File operations', 'Flags', 'Permissions', 'Grep/Find', 'Piping', 'Linux wrap-up'
   ]],
-  ['Section 39: Convolutional Neural Networks', 'HARD', [
-    'Convolution and filters', 'Padding, stride and pooling', 'LeNet and AlexNet',
-    'VGG and deeper networks', 'Building a CNN image classifier', 'Visualizing feature maps',
-    'CNN project: CIFAR-10'
+  ['Section 39: Git & GitHub', 'EASY', [
+    'Git intro', 'Init/Add/Commit', 'Branches', 'Merge', 'Remote repos', 'Push/Pull', 'Forking', 'Pull Requests',
+    'Merge Conflicts', 'Git wrap-up'
   ]],
-  ['Section 40: Modern CNN Architectures', 'HARD', [
-    'Inception modules', 'ResNet and skip connections', 'DenseNet', 'MobileNet and EfficientNet',
-    'Choosing an architecture', 'Benchmarking models'
+  ['Section 40: Deep Learning (Part 1)', 'MEDIUM', [
+    'ANN introduction', 'Perceptrons', 'Activation Functions', 'Multi-layer Networks', 'Forward Propagation intro',
+    'DL Part 1 wrap-up'
   ]],
-  ['Section 41: Transfer Learning', 'MEDIUM', [
-    'Why transfer learning works', 'Feature extraction', 'Fine-tuning pretrained models',
-    'Transfer learning with small datasets', 'Model hubs', 'Transfer learning project',
-    'Domain adaptation basics'
+  ['Section 41: Deep Learning (Part 2)', 'HARD', [
+    'Forward Propagation', 'Backward Propagation', 'Loss Functions (Regression)', 'Loss Functions (Classification)',
+    'Vanishing Gradient Problem', 'ReLU & variants', 'Weight Initialization', 'DL Part 2 wrap-up'
   ]],
-  ['Section 42: Object Detection', 'HARD', [
-    'Bounding boxes and IoU', 'R-CNN family', 'YOLO', 'SSD', 'Non-max suppression',
-    'Training a detector on custom data'
+  ['Section 42: Deep Learning (Part 3)', 'HARD', [
+    'Optimizers intro', 'SGD', 'Momentum', 'Adam', 'Regularization', 'Dropout', 'Batch Normalization', 'DL Part 3 wrap-up'
   ]],
-  ['Section 43: Image Segmentation', 'HARD', [
-    'Semantic vs instance segmentation', 'Fully convolutional networks', 'U-Net', 'Mask R-CNN',
-    'Segmentation metrics', 'Segmentation project'
+  ['Section 43: Deep Learning (Part 4)', 'HARD', [
+    'Training ANN', 'Hyperparameter Tuning', 'Saving/Loading Models', 'Classification Project', 'Regression Project',
+    'DL Part 4 wrap-up'
   ]],
-  ['Section 44: Recurrent Neural Networks', 'HARD', [
-    'Sequence data', 'Vanilla RNNs', 'Backpropagation through time', 'LSTM', 'GRU',
-    'Bidirectional and stacked RNNs', 'Time-series forecasting with RNNs'
+  ['Section 44: Deep Learning (Part 5 — CNNs)', 'HARD', [
+    'CNN intro', 'Convolution Layer', 'Pooling', 'Fully Connected Layer', 'CNN Architecture', 'Image Classification Project',
+    'DL Part 5 wrap-up'
   ]],
-  ['Section 45: NLP Fundamentals', 'MEDIUM', [
-    'Text preprocessing and tokenization', 'Bag of words and TF-IDF', 'N-gram language models',
-    'Text classification', 'Named entity recognition', 'Sentiment analysis project',
-    'Evaluation metrics for NLP'
+  ['Section 45: Deep Learning (Part 6 — RNN/LSTM)', 'HARD', [
+    'Text Processing', 'TF-IDF', 'RNN Architecture', 'Vanishing Gradient in RNN', 'LSTM intro', 'LSTM Gates',
+    'Backpropagation in RNN', 'DL Part 6 wrap-up'
   ]],
-  ['Section 46: Word Embeddings', 'MEDIUM', [
-    'Distributed representations', 'Word2Vec', 'GloVe', 'FastText', 'Visualizing embeddings',
-    'Using pretrained embeddings'
+  ['Section 46: Reinforcement Learning (Part 1)', 'HARD', [
+    'RL intro', 'MDP', 'RL Components', 'Reward', 'Policy', 'Value Functions', 'Q-Functions', 'Exploration vs Exploitation',
+    'RL Part 1 wrap-up'
   ]],
-  ['Section 47: Sequence-to-Sequence & Attention', 'HARD', [
-    'Encoder–decoder architecture', 'Machine translation with seq2seq', 'Attention mechanism',
-    'Bahdanau vs Luong attention', 'Beam search', 'Seq2seq project', 'BLEU score'
+  ['Section 47: Reinforcement Learning (Part 2)', 'HARD', [
+    'TD Learning', 'SARSA intro', 'SARSA algorithm', 'Q-Learning intro', 'Q-Learning algorithm', 'Cliff-Walking Problem',
+    'On-policy vs Off-policy', 'RL Part 2 wrap-up'
   ]],
-  ['Section 48: Transformers', 'HARD', [
-    'Self-attention', 'Multi-head attention', 'Positional encoding', 'The Transformer block',
-    'Implementing a Transformer from scratch', 'Training tricks for Transformers',
-    'Efficient attention variants'
+  ['Section 48: Reinforcement Learning (Part 3)', 'HARD', [
+    'SARSA Implementation', 'Grid World', 'Agent Training', 'Agent Evaluation', 'Q-Learning Implementation', 'Comparison',
+    'RL Part 3 wrap-up'
   ]],
-  ['Section 49: Pretrained Language Models', 'HARD', [
-    'BERT and masked language modelling', 'GPT and autoregressive models', 'T5 and encoder–decoder LMs',
-    'Hugging Face Transformers library', 'Fine-tuning BERT for classification',
-    'Tokenizers: BPE and WordPiece'
+  ['Section 49: Reinforcement Learning (Part 4 — DQN)', 'HARD', [
+    'Deep RL intro', 'DQN', 'Experience Replay', 'Target Network', 'Policy Network', 'Flappy Bird Project', 'DQN Training',
+    'RL Part 4 wrap-up'
   ]],
-  ['Section 50: Large Language Models', 'HARD', [
-    'Scaling laws', 'Instruction tuning', 'RLHF overview', 'Prompt engineering',
-    'Parameter-efficient fine-tuning (LoRA)', 'Evaluating LLMs', 'Running LLMs locally'
+  ['Section 50: Deep Learning (Part 7 — GenAI & LLMs)', 'MEDIUM', [
+    'GenAI intro', 'LLMs intro', 'Transformer overview', 'Word Embeddings', 'Contextual Embeddings', 'GPT Architecture',
+    'BERT overview', 'DL Part 7 wrap-up'
   ]],
-  ['Section 51: Retrieval-Augmented Generation', 'MEDIUM', [
-    'Why RAG', 'Embeddings and vector databases', 'Chunking strategies', 'Building a RAG pipeline',
-    'Re-ranking', 'Evaluating RAG systems', 'RAG project: document Q&A'
+  ['Section 51: Deep Learning (Part 8 — Transformer Architecture)', 'HARD', [
+    'Self-Attention', 'Multi-Head Attention', 'Positional Encoding', 'Residual Connections', 'Layer Normalization',
+    'Cross-Attention', 'Decoder', 'DL Part 8 wrap-up'
   ]],
-  ['Section 52: Autoencoders', 'MEDIUM', [
-    'Undercomplete autoencoders', 'Denoising autoencoders', 'Sparse autoencoders',
-    'Anomaly detection with autoencoders', 'Variational autoencoders [HARD]', 'Latent space exploration'
+  ['Section 52: HuggingFace & NLP Project + Deployment', 'HARD', [
+    'HuggingFace intro', 'Fine-tuning Transformer', 'Text Summarization', 'NLP Pipeline', 'FastAPI intro', 'API Deployment',
+    'HTML/JS Frontend', 'Full-stack Integration', 'Project wrap-up'
   ]],
-  ['Section 53: Generative Adversarial Networks', 'HARD', [
-    'GAN intuition', 'Generator and discriminator', 'Training instability', 'DCGAN',
-    'Conditional GANs', 'CycleGAN and StyleGAN', 'GAN project'
+  ['Section 53: CSS — Part 1', 'EASY', lessons('CSS Part 1', 14), OPTIONAL],
+  ['Section 54: CSS — Part 2', 'EASY', lessons('CSS Part 2', 12), OPTIONAL],
+  ['Section 55: Deep Learning (Part 9 — RAG)', 'MEDIUM', [
+    'RAG intro', 'RAG Pipeline', 'LangChain intro', 'Document Ingestion', 'Vector Store', 'Retrieval Chain',
+    'GPT Integration', 'Groq Integration', 'RAG Project', 'DL Part 9 wrap-up'
   ]],
-  ['Section 54: Diffusion Models', 'HARD', [
-    'Forward and reverse diffusion', 'Denoising score matching', 'DDPM', 'Classifier-free guidance',
-    'Latent diffusion and Stable Diffusion', 'Text-to-image pipelines'
+  ['Section 56: Deep Learning (Part 10)', 'MEDIUM', [
+    'Fine-tuning LLMs', 'LoRA', 'QLoRA', 'Advanced LLM Topics', 'DL Part 10 wrap-up'
   ]],
-  ['Section 55: Reinforcement Learning Foundations', 'HARD', [
-    'Agents, environments and rewards', 'Markov decision processes', 'Bellman equations',
-    'Dynamic programming', 'Monte Carlo methods', 'Temporal difference learning',
-    'Exploration vs exploitation'
+  ['Section 57: OpenAI APIs', 'EASY', [
+    'Responses API', 'API Parameters', 'Text Generation', 'System/User/Assistant Roles', 'Structured Output',
+    'Function Calling', 'APIs wrap-up'
   ]],
-  ['Section 56: Q-Learning & Deep Q-Networks', 'HARD', [
-    'Tabular Q-learning', 'SARSA', 'Deep Q-Networks', 'Experience replay and target networks',
-    'Double and Dueling DQN', 'DQN project: Atari / CartPole'
+  ['Section 58: CSS — Part 3', 'EASY', lessons('CSS Part 3', 10), OPTIONAL],
+  ['Section 59: CSS — Part 4', 'EASY', lessons('CSS Part 4', 8), OPTIONAL],
+  ['Section 60: Working with Flask', 'MEDIUM', [
+    'Flask intro', 'Routes', 'Templates', 'Jinja2', 'Forms', 'Query Strings', 'POST/GET', 'Flask Project', 'Flask wrap-up'
   ]],
-  ['Section 57: Policy Gradient Methods', 'HARD', [
-    'Policy-based vs value-based methods', 'REINFORCE', 'Actor–critic', 'A2C and A3C',
-    'Proximal Policy Optimization (PPO)', 'Continuous control', 'Gymnasium environments'
+  ['Section 61: Deep Learning (Part 11 — GANs)', 'HARD', [
+    'GAN intro', 'Generator', 'Discriminator', 'Training GANs', 'DCGAN', 'CelebA Dataset', 'GAN Project', 'DL Part 11 wrap-up'
   ]],
-  ['Section 58: Graph Neural Networks', 'HARD', [
-    'Graphs as data', 'Message passing', 'Graph convolutional networks', 'Graph attention networks',
-    'Node and graph classification', 'PyTorch Geometric'
-  ]],
-  ['Section 59: Model Deployment', 'MEDIUM', [
-    'Exporting models (ONNX, TorchScript)', 'Serving with FastAPI', 'Docker for ML',
-    'Model optimization and quantization', 'Edge deployment', 'Monitoring models in production',
-    'Deployment project'
-  ]],
-  ['Section 60: MLOps', 'MEDIUM', [
-    'Experiment tracking', 'Data and model versioning', 'CI/CD for ML', 'Feature stores',
-    'Pipeline orchestration', 'Model registry'
-  ]],
-  ['Section 61: AI Ethics & Responsible AI', 'EASY', [
-    'Bias and fairness', 'Explainability (SHAP, LIME)', 'Privacy and differential privacy',
-    'AI safety basics', 'Regulation and governance', 'Responsible AI checklist'
-  ]],
-  ['Section 62: Capstone Project', 'HARD', [
-    'Choosing a capstone problem', 'Data collection and EDA', 'Baseline model',
-    'Iterating on the model', 'Deploying the capstone', 'Writing the project report',
-    'Presenting your work'
+  ['Section 62: Agentic AI', 'MEDIUM', [
+    'Agentic AI intro', 'Agent Frameworks', 'Agno Framework', 'Finance Agent', 'Multi-Agent Teams', 'Agent Memory',
+    'YouTube Agent', 'Agent Deployment', 'Advanced Agents', 'Course Finale'
   ]]
 ];
 
@@ -206,9 +181,13 @@ const germanSections = [
   ]]
 ];
 
-const toSections = (list) => list.map(([title, difficulty, topics]) => ({ title, difficulty, topics }));
+const toSections = (list) => list.map(([title, difficulty, topics, opts = {}]) => ({ title, difficulty, topics, optional: !!opts.optional }));
+
+// Bump when the seed changes; untouched tracks in existing databases are re-seeded.
+const VERSION = 2;
 
 module.exports = {
+  version: VERSION,
   tracks: [
     {
       id: 'ai', name: 'AI Course', kind: 'topics', pace: 'normal', deadline: '14:00',

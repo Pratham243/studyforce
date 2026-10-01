@@ -4,7 +4,7 @@ import { fmtDate } from '../lib/format';
 import { Bar, Difficulty, PaceSwitch, TopicRow } from '../components/ui';
 
 export default function TrackPage({ snap, track, onDeleted }) {
-  const firstOpen = track.sections.findIndex((s) => s.done < s.total);
+  const firstOpen = track.sections.findIndex((s) => !s.optional && s.done < s.total);
   const [open, setOpen] = useState(() => new Set(firstOpen >= 0 ? [track.sections[firstOpen].id] : []));
   const toggle = (id) => setOpen((o) => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const seeded = ['ai', 'german'].includes(track.id);
@@ -19,7 +19,7 @@ export default function TrackPage({ snap, track, onDeleted }) {
 
       <div className="grid cols-4">
         <div className="card tight stat"><span className="v">{track.percent}%</span><span className="l">Complete</span></div>
-        <div className="card tight stat"><span className="v">{track.done}<span className="muted" style={{ fontSize: 16 }}>/{track.total}</span></span><span className="l">Topics</span></div>
+        <div className="card tight stat"><span className="v">{track.done}<span className="muted" style={{ fontSize: 16 }}>/{track.total}</span></span><span className="l">Topics{track.sections.some((s) => s.optional) ? ' · excl. optional' : ''}</span></div>
         <div className="card tight stat"><span className="v">{track.doneToday}<span className="muted" style={{ fontSize: 16 }}>/{track.quota}</span></span><span className="l">Today</span></div>
         <div className="card tight stat">
           <span className="v" style={{ fontSize: 20 }}>{track.projectedFinish ? fmtDate(track.projectedFinish, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Done'}</span>
@@ -51,7 +51,7 @@ export default function TrackPage({ snap, track, onDeleted }) {
             <div className="section-head" onClick={() => toggle(s.id)}>
               <span className="faint mono" style={{ width: 14 }}>{open.has(s.id) ? '▾' : '▸'}</span>
               <h3 className="grow ellipsis">{s.title}</h3>
-              <Difficulty value={s.difficulty} />
+              {s.optional ? <span className="badge OPTIONAL" title="Doesn't count toward quotas or progress">Optional</span> : <Difficulty value={s.difficulty} />}
               <span className="mono small muted" style={{ width: 54, textAlign: 'right' }}>{s.done}/{s.total}</span>
               <div style={{ width: 120 }}><Bar value={s.done} max={s.total} color={s.done === s.total ? 'var(--ok)' : track.color} /></div>
             </div>

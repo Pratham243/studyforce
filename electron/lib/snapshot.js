@@ -39,19 +39,21 @@ function buildSnapshot(store, now = new Date()) {
     const sections = store.sections(t.id).map((s) => {
       const st = topics.filter((x) => x.section_id === s.id);
       return {
-        id: s.id, title: s.title, difficulty: s.difficulty,
+        id: s.id, title: s.title, difficulty: s.difficulty, optional: !!s.optional,
         total: st.length, done: st.filter((x) => x.done_date).length,
         topics: st.map((x) => ({ id: x.id, title: x.title, difficulty: x.difficulty, doneDate: x.done_date }))
       };
     });
-    const total = topics.length;
-    const done = topics.filter((x) => x.done_date).length;
+    // Optional sections can be checked off but don't count toward progress.
+    const core = topics.filter((x) => !x.optional);
+    const total = core.length;
+    const done = core.filter((x) => x.done_date).length;
     const remaining = total - done;
     // Today's list: what was checked off today, then the next undone topics.
-    const upNext = topics.filter((x) => !x.done_date).slice(0, left);
+    const upNext = core.filter((x) => !x.done_date).slice(0, left);
     const sectionTitle = (sid) => (sections.find((s) => s.id === sid) || {}).title;
     out.today = [
-      ...topics.filter((x) => x.done_date === today),
+      ...core.filter((x) => x.done_date === today),
       ...upNext
     ].map((x) => ({ id: x.id, title: x.title, difficulty: x.difficulty, doneDate: x.done_date, section: sectionTitle(x.section_id) }));
     out.estimatedMinutes = estimateMinutes(upNext);
