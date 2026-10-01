@@ -17,6 +17,12 @@ function completeToday(store, now) {
   for (const t of snap.tracks) {
     if (t.kind === 'count') {
       for (let i = 0; i < t.left; i++) store.addApplication({ company: `Co${i}`, sentAt: now.getTime() });
+    } else if (t.kind === 'phased') {
+      if (!t.active) continue;
+      const day = snap.today;
+      store.addHours(day, t.id, Math.max(0, t.german.targetHours - t.german.todayHours));
+      for (const k of ['practice_grammar', 'practice_vocab', 'practice_reading', 'practice_listening']) store.updateLog(day, t.id, { [k]: 1 });
+      for (const topic of t.today.filter((x) => !x.doneDate)) store.setTopicDone(topic.id, true, now);
     } else {
       for (const topic of t.today.filter((x) => !x.doneDate)) store.setTopicDone(topic.id, true, now);
     }
@@ -29,7 +35,8 @@ test('seed loads the three tracks', async () => {
   const byId = Object.fromEntries(snap.tracks.map((t) => [t.id, t]));
   assert.equal(byId.ai.total, 196);
   assert.equal(byId.ai.today[0].title, 'AdaBoost');
-  assert.equal(byId.german.total, 105);
+  assert.equal(byId.german.kind, 'phased');
+  assert.equal(byId.german.total, 32);
   assert.equal(byId.apps.kind, 'count');
   assert.equal(snap.punishment.level, 1);
   assert.equal(snap.streak, 0);

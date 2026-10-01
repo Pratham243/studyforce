@@ -28,8 +28,8 @@ export default function Alert({ params }) {
     const kind = params.get('kind');
     const value = params.get('value');
     const title = kind === 'milestone' ? `${value}% of ${params.get('track')}!`
-      : kind === 'section' ? 'Section complete!' : 'All done for today!';
-    const sub = kind === 'section' ? value : kind === 'day' ? `Streak: ${snap.streak} 🔥` : 'Keep that pace.';
+      : kind === 'section' ? 'Section complete!' : kind === 'exam' ? 'Mock exam passed!' : 'All done for today!';
+    const sub = kind === 'section' || kind === 'exam' ? value : kind === 'day' ? `Streak: ${snap.streak} 🔥` : 'Keep that pace.';
     return (
       <div className="float-card pop-in row" style={{ padding: 18, gap: 16, height: 'calc(100vh - 20px)' }} onClick={close}>
         <Confetti burst={1} />
@@ -60,7 +60,7 @@ export default function Alert({ params }) {
             <div key={t.id}>
               <div className="row between" style={{ marginBottom: 4 }}>
                 <b style={{ color: t.color }}>{t.name}</b>
-                <span className="small muted mono">{t.quota}{t.kind === 'count' ? ' to send' : ''} · due {t.deadline} · {fmtHours(t.estimatedMinutes)}</span>
+                <span className="small muted mono">{t.kind === 'phased' ? `${t.german.targetHours} h + 4 practice` : `${t.quota}${t.kind === 'count' ? ' to send' : ''}`} · due {t.deadline} · {fmtHours(t.estimatedMinutes)}</span>
               </div>
               {(t.today || []).filter((x) => !x.doneDate).map((x) => (
                 <div key={x.id} className="row small" style={{ padding: '3px 0' }}>

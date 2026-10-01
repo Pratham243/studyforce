@@ -48,6 +48,34 @@ Data is stored in `studyforce.sqlite` in Electron's user-data folder (`%APPDATA%
 
 When the app launches it checks yesterday right away, so Level 2/3 punishment shows immediately. Days the app wasn't open still count. Carry-forward is capped at twice your daily pace; anything bigger goes through the recovery plan.
 
+## German track (A2 → C1)
+
+German is tracked by **hours plus grammar topics**, in three phases:
+
+| Phase | Topics | Min. hours | Unlock |
+| --- | --- | --- | --- |
+| 1 · A2 → B1 (Grammatik aktiv, ch. 49–80) | 32 | 150 | — |
+| 2 · B1 → B2 | 19 | 225 | Pass the B1 mock exam |
+| 3 · B2 → C1 | 13 | 250 | Pass the B2 mock exam |
+
+- **Pace modes** are hours per day: Normal 2 h, Fast 3.5 h, Intensive 5 h. From Oct 2 they project C1 by Aug 11 2027, Mar 30 2027 and Feb 4 2027. The dashboard also shows a live projection from your actual daily average: "At 2.3 hrs/day → C1 by …".
+- **Dashboard card:**
+  - the current phase
+  - phase hours and topics bars
+  - a start/stop study timer, plus manual hour entry (a negative number corrects mistakes)
+  - the daily practice checklist: grammar, vocabulary (SeedLang), reading/writing, listening/speaking
+  - today's grammar topics, the projected C1 date and days remaining
+  - a German streak
+  - session notes
+- **Daily score** = hours/target × 0.5 + checklist/4 × 0.25 + grammar done/grammar target × 0.25. The grammar target is the phase's remaining topics ÷ days until the phase's hours are reached at your pace. German is **30%** of the overall daily score; AI and applications are 35% each.
+- **Roadmap** (click German in the sidebar or "Roadmap" on the card) is a vertical timeline:
+  - the current topic is marked "You are here", and locked phases are greyed out and can't be ticked
+  - each phase ends with its Goethe mock exam, which unlocks once every topic in the phase is done **and** its minimum hours are reached
+  - enter a score from 0 to 100: 60+ passes and unlocks the next phase; a fail allows a retry after 7 more days with study hours logged
+- **Session notes** are saved per day (`daily_logs.notes`) and listed in the Weekly review.
+- **Hours across phases:** hours logged before you pass an exam count toward the phase you were in on that day. Phase hours are cached in `tracks.phase1_hours`…`phase3_hours`.
+- **Carry-forward** doesn't apply to German; a missed German day still counts toward the punishment levels.
+
 ## Setup
 
 **Deadlines:** set these in Settings → Deadlines. Defaults: AI by 14:00, German by 20:00, applications by 23:00.
@@ -64,7 +92,7 @@ When the app launches it checks yesterday right away, so Level 2/3 punishment sh
 
 `data/curriculum.js` is loaded on first run:
 
-- **German:** 105 topics across a diagnostic plus three phases (A2→B1, B1→B2, B2→C1), each with Grammatik / Lesen / Hören / Schreiben / Sprechen sections.
+- **German:** Goethe-Zertifikat C1 track starting Oct 2, 2026: 64 grammar topics and 625 hours across three phases (see below).
 - **AI course:** Apna College, Sections 34–62. That's 196 core topics, starting at AdaBoost. The four CSS sections (53, 54, 58, 59; 44 lessons) are marked optional. They can be checked off but never count toward quotas, progress or finish dates.
 
 If you already ran an earlier version, seeded tracks with no progress are replaced with the new list automatically on next launch. A track you have already ticked topics in is left as-is; delete the database to start fresh.

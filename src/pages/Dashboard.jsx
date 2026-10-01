@@ -3,11 +3,12 @@ import { invoke } from '../lib/api';
 import { fmtCountdown, fmtDate, fmtHours, LEVEL_NAMES } from '../lib/format';
 import { Bar, PaceSwitch, TopicRow, MultiClickButton } from '../components/ui';
 import Owl from '../components/Owl';
+import GermanCard from '../components/GermanCard';
 
 export default function Dashboard({ snap, go }) {
   const p = snap.punishment;
   const { totals } = snap;
-  const pct = totals.quota ? Math.round((totals.doneToday / totals.quota) * 100) : 0;
+  const pct = totals.percent;
   const hard = snap.tracks.flatMap((t) => (t.today || []).filter((x) => !x.doneDate && x.difficulty === 'HARD'))[0];
 
   return (
@@ -38,10 +39,10 @@ export default function Dashboard({ snap, go }) {
         </div>
         <div style={{ textAlign: 'right', minWidth: 180 }}>
           <div className="big-pct">{pct}<small>%</small></div>
-          <div className="small muted" style={{ margin: '6px 0 10px' }}>
-            <span className="mono">{totals.doneToday}/{totals.quota}</span> done today
+          <div className="small muted" style={{ margin: '6px 0 10px' }} title="Weighted: each track's share of today's score">
+            {snap.tracks.filter((t) => t.active !== false).map((t) => `${t.name.split(' ')[0]} ${Math.round(t.weight * 100)}%`).join(' · ')}
           </div>
-          <Bar value={totals.doneToday} max={totals.quota} lg striped={pct < 100} color={pct >= 100 ? 'var(--ok)' : undefined} />
+          <Bar value={pct} max={100} lg striped={pct < 100} color={pct >= 100 ? 'var(--ok)' : undefined} />
         </div>
       </div>
 
@@ -56,7 +57,9 @@ export default function Dashboard({ snap, go }) {
       <div className="grid cols-3">
         {snap.tracks.map((t) => (t.kind === 'count'
           ? <AppsCard key={t.id} track={t} snap={snap} go={go} />
-          : <TrackCard key={t.id} track={t} go={go} />))}
+          : t.kind === 'phased'
+            ? <GermanCard key={t.id} track={t} go={go} />
+            : <TrackCard key={t.id} track={t} go={go} />))}
       </div>
     </div>
   );

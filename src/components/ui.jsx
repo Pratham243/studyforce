@@ -23,25 +23,37 @@ export const PACE_OPTIONS = [
   ['intensive', 'Intensive', '10+/day']
 ];
 
+const HOURS = { normal: 2, fast: 3.5, intensive: 5 };
+
 export function PaceSwitch({ track }) {
+  const phased = track.kind === 'phased';
   return (
     <div className="seg" title="Pace mode — completion date adjusts instantly">
-      {PACE_OPTIONS.map(([id, label, hint]) => (
-        <button key={id} className={track.pace === id ? 'on' : ''} title={hint}
-          onClick={() => invoke('track:update', track.id, { pace: id })}>{label}</button>
-      ))}
+      {PACE_OPTIONS.map(([id, label, hint]) => {
+        const finish = phased && track.german.paceProjections[id];
+        const tip = phased ? `${HOURS[id]} h/day${finish ? ` → C1 by ${finish}` : ''}` : hint;
+        return (
+          <button key={id} className={track.pace === id ? 'on' : ''} title={tip}
+            onClick={() => invoke('track:update', track.id, { pace: id })}>
+            {label}{phased && <span style={{ opacity: 0.75 }}> {HOURS[id]}h</span>}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-export function TopicRow({ topic, showSection }) {
+export function TopicRow({ topic, showSection, locked, here }) {
   const done = !!topic.doneDate;
+  const toggle = () => !locked && invoke('topic:toggle', topic.id, !done).catch(() => {});
   return (
-    <div className={`topic${done ? ' done' : ''}`} role="checkbox" aria-checked={done} tabIndex={0}
-      onClick={() => invoke('topic:toggle', topic.id, !done)}
-      onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), invoke('topic:toggle', topic.id, !done))}>
-      <span className="check" />
+    <div className={`topic${done ? ' done' : ''}${locked ? ' locked' : ''}${here ? ' here' : ''}`} role="checkbox"
+      aria-checked={done} aria-disabled={locked || undefined} tabIndex={locked ? -1 : 0}
+      onClick={toggle}
+      onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), toggle())}>
+      <span className="check">{locked && !done ? '🔒' : null}</span>
       <div className="grow">
+        {here && <div className="here-tag">▶ You are here</div>}
         <div className="t ellipsis">{topic.title}</div>
         {showSection && topic.section && <div className="small faint ellipsis">{topic.section}</div>}
       </div>

@@ -201,6 +201,29 @@ label.field > span { font-weight: 500; }
 .topic.done .check { background: var(--ok); border-color: var(--ok); }
 .topic.done .check::after { content: ''; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
 
+.topic.locked { cursor: not-allowed; opacity: 0.45; }
+.topic.locked:hover { background: transparent; }
+.topic.locked .check { border-style: dashed; font-size: 10px; }
+.topic.here { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.here-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.badge.here-badge { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Roadmap timeline */
+.timeline { position: relative; padding-left: 44px; display: flex; flex-direction: column; gap: 18px; }
+.timeline::before { content: ''; position: absolute; left: 17px; top: 18px; bottom: 18px; width: 2px; background: var(--border); }
+.tl-node {
+  position: absolute; left: -44px; top: 16px; width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; font-family: var(--font-mono); font-weight: 700;
+  background: var(--surface-2); border: 2px solid var(--border); color: var(--muted);
+}
+.tl-phase { position: relative; }
+.tl-phase.current .tl-node { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 6px var(--accent-soft); }
+.tl-phase.passed .tl-node { background: var(--ok); border-color: var(--ok); color: #fff; }
+.tl-phase.locked > .card { opacity: 0.55; filter: grayscale(0.6); }
+.exam-box { border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.exam-box.available { border-color: var(--accent); border-style: solid; background: var(--accent-soft); }
+.exam-box.passed { border-color: var(--ok); border-style: solid; }
+
 .section-head { display: flex; align-items: center; gap: 10px; padding: 10px; cursor: pointer; border-radius: 10px; }
 .section-head:hover { background: var(--surface-2); }
 

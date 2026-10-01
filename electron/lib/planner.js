@@ -3,9 +3,10 @@
 const { addDays } = require('./dates');
 
 const PACES = {
-  normal: { label: 'Normal', perDay: 5, range: '4–5/day' },
-  fast: { label: 'Fast', perDay: 8, range: '7–8/day' },
-  intensive: { label: 'Intensive', perDay: 10, range: '10+/day' }
+  // perDay: topics/day for topic tracks. hours: study hours/day for phased tracks.
+  normal: { label: 'Normal', perDay: 5, range: '4–5/day', hours: 2 },
+  fast: { label: 'Fast', perDay: 8, range: '7–8/day', hours: 3.5 },
+  intensive: { label: 'Intensive', perDay: 10, range: '10+/day', hours: 5 }
 };
 
 // Estimated minutes per topic, used by the morning briefing.
@@ -14,6 +15,7 @@ const MINUTES_PER_APPLICATION = 20;
 
 function basePerDay(track) {
   if (track.kind === 'count') return Math.max(0, track.dailyTarget || 0);
+  if (track.kind === 'phased') return 1; // placeholder; real units come from daily_logs
   return (PACES[track.pace] || PACES.normal).perDay;
 }
 

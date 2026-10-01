@@ -7,6 +7,7 @@ import { Confetti } from './components/ui';
 import Owl from './components/Owl';
 import Dashboard from './pages/Dashboard';
 import TrackPage from './pages/TrackPage';
+import Roadmap from './pages/Roadmap';
 import Applications from './pages/Applications';
 import Focus from './pages/Focus';
 import Reports from './pages/Reports';
@@ -31,7 +32,7 @@ export default function App() {
   const appsTrack = snap.tracks.find((t) => t.kind === 'count');
   const nav = [
     ['dashboard', 'Dashboard', '◉'],
-    ...topicTracks.map((t) => [`track:${t.id}`, t.name, t, `${t.doneToday}/${t.quota}`]),
+    ...topicTracks.map((t) => [`track:${t.id}`, t.name, t, t.kind === 'phased' ? `${Math.round(t.score * 100)}%` : `${t.doneToday}/${t.quota}`]),
     ...(appsTrack ? [['applications', appsTrack.name, appsTrack, `${appsTrack.doneToday}/${appsTrack.quota}`]] : []),
     ['focus', pomodoro.running ? `Focus · ${pomodoro.display}` : 'Focus', '◷'],
     ['reports', 'Weekly review', '▤'],
@@ -42,7 +43,9 @@ export default function App() {
   let page;
   if (tab.startsWith('track:')) {
     const track = snap.tracks.find((t) => t.id === tab.slice(6));
-    page = track ? <TrackPage snap={snap} track={track} onDeleted={() => setTab('dashboard')} /> : null;
+    page = !track ? null : track.kind === 'phased'
+      ? <Roadmap track={track} />
+      : <TrackPage snap={snap} track={track} onDeleted={() => setTab('dashboard')} />;
   }
   page = page || {
     dashboard: <Dashboard snap={snap} go={setTab} />,

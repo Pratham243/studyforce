@@ -15,6 +15,15 @@ CREATE TABLE IF NOT EXISTS tracks (
   daily_target INTEGER NOT NULL DEFAULT 0, color TEXT, sort INTEGER NOT NULL DEFAULT 0,
   created_on TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS daily_logs (
+  date TEXT NOT NULL, track_id TEXT NOT NULL, phase INTEGER NOT NULL DEFAULT 1,
+  hours_studied REAL NOT NULL DEFAULT 0,
+  practice_grammar INTEGER NOT NULL DEFAULT 0, practice_vocab INTEGER NOT NULL DEFAULT 0,
+  practice_reading INTEGER NOT NULL DEFAULT 0, practice_listening INTEGER NOT NULL DEFAULT 0,
+  notes TEXT, mock_exam_score INTEGER, mock_exam_passed INTEGER, exam_phase INTEGER,
+  units_done INTEGER NOT NULL DEFAULT 0, units_quota INTEGER NOT NULL DEFAULT 0, score REAL NOT NULL DEFAULT 0,
+  PRIMARY KEY (date, track_id)
+);
 CREATE TABLE IF NOT EXISTS sections (
   id INTEGER PRIMARY KEY AUTOINCREMENT, track_id TEXT NOT NULL, title TEXT NOT NULL,
   difficulty TEXT NOT NULL DEFAULT 'MEDIUM', sort INTEGER NOT NULL DEFAULT 0,
@@ -41,6 +50,20 @@ CREATE TABLE IF NOT EXISTS pomodoros (
 );
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `;
+
+// Columns added after the first release; migrate() adds any that are missing.
+const ADDED_COLUMNS = {
+  tracks: {
+    weight: 'REAL NOT NULL DEFAULT 0.35', meta: 'TEXT', current_phase: 'INTEGER NOT NULL DEFAULT 1',
+    phase1_hours: 'REAL NOT NULL DEFAULT 0', phase2_hours: 'REAL NOT NULL DEFAULT 0', phase3_hours: 'REAL NOT NULL DEFAULT 0',
+    phase1_exam_passed: 'INTEGER NOT NULL DEFAULT 0', phase2_exam_passed: 'INTEGER NOT NULL DEFAULT 0',
+    phase3_exam_passed: 'INTEGER NOT NULL DEFAULT 0'
+  },
+  sections: { optional: 'INTEGER NOT NULL DEFAULT 0', phase: 'INTEGER NOT NULL DEFAULT 0' },
+  topics: { optional: 'INTEGER NOT NULL DEFAULT 0' }
+};
+const LOG_FIELDS = ['hours_studied', 'practice_grammar', 'practice_vocab', 'practice_reading', 'practice_listening',
+  'notes', 'mock_exam_score', 'mock_exam_passed', 'exam_phase', 'units_done', 'units_quota', 'score'];
 
 const DEFAULT_SETTINGS = {
   theme: 'dark',
@@ -150,9 +173,11 @@ class Store {
 
   // Adds columns introduced after a database was first created.
   migrate() {
-    for (const table of ['sections', 'topics']) {
-      const cols = this.all(`PRAGMA table_info(${table})`).map((c) => c.name);
-      if (!cols.includes('optional')) this.db.run(`ALTER TABLE ${table} ADD COLUMN optional INTEGER NOT NULL DEFAULT 0`);
+    for (const [table, cols] of Object.entries(ADDED_COLUMNS)) {
+      const have = this.all(`PRAGMA table_info(${table})`).map((c) => c.name);
+      for (const [col, def] of Object.entries(cols)) {
+        if (!have.includes(col)) this.db.run(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+      }
     }
   }
 
@@ -162,10 +187,17 @@ class Store {
     const version = seed.version || 1;
     if (this.kvGet('seedVersion', 1) >= version) return;
     for (const t of seed.tracks) {
-      if (t.kind === 'count' || !this.track(t.id)) continue;
-      if (this.get('SELECT COUNT(*) AS n FROM topics WHERE track_id = ? AND done_date IS NOT NULL', [t.id]).n > 0) continue;
+      if (!this.track(t.id)) continue;
+      if (t.weight != null) this.db.run('UPDATE tracks SET weight = ? WHERE id = ?', [t.weight, t.id]);
+      if (t.kind === 'count') continue;
+      const progress = this.get('SELECT COUNT(*) AS n FROM topics WHERE track_id = ? AND done_date IS NOT NULL', [t.id]).n +
+        this.get('SELECT COUNT(*) AS n FROM daily_logs WHERE track_id = ? AND hours_studied > 0', [t.id]).n;
+      if (progress > 0) continue;
       this.db.run('DELETE FROM topics WHERE track_id = ?', [t.id]);
       this.db.run('DELETE FROM sections WHERE track_id = ?', [t.id]);
+      this.db.run('DELETE FROM days WHERE track_id = ?', [t.id]);
+      this.db.run('UPDATE tracks SET kind = ?, meta = ?, current_phase = 1, created_on = COALESCE(?, created_on) WHERE id = ?',
+        [t.kind || 'topics', t.meta ? JSON.stringify(t.meta) : null, t.startDate || null, t.id]);
       this.addSections(t.id, t.sections);
     }
     this.kvSet('seedVersion', version);
@@ -195,9 +227,10 @@ class Store {
 
   insertTrack(t, today = toDateStr()) {
     this.db.run(
-      'INSERT INTO tracks (id, name, kind, pace, deadline, daily_target, color, sort, created_on) VALUES (?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO tracks (id, name, kind, pace, deadline, daily_target, color, sort, created_on, weight, meta) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
       [t.id, t.name, t.kind || 'topics', t.pace || 'normal', t.deadline || '20:00', t.dailyTarget || 0,
-        t.color || '#E85D1F', t.sort ?? this.get('SELECT COUNT(*) AS n FROM tracks').n, today]
+        t.color || '#E85D1F', t.sort ?? this.get('SELECT COUNT(*) AS n FROM tracks').n, t.startDate || today,
+        t.weight ?? 0.35, t.meta ? JSON.stringify(t.meta) : null]
     );
     this.addSections(t.id, t.sections || []);
   }
@@ -208,8 +241,8 @@ class Store {
     for (const s of sections) {
       const diff = (s.difficulty || 'MEDIUM').toUpperCase();
       const optional = s.optional ? 1 : 0;
-      this.db.run('INSERT INTO sections (track_id, title, difficulty, sort, optional) VALUES (?,?,?,?,?)',
-        [trackId, s.title, diff, sSort++, optional]);
+      this.db.run('INSERT INTO sections (track_id, title, difficulty, sort, optional, phase) VALUES (?,?,?,?,?,?)',
+        [trackId, s.title, diff, sSort++, optional, s.phase || 0]);
       const sectionId = this.lastId();
       for (const topic of s.topics) {
         let title = typeof topic === 'string' ? topic : topic.title;
@@ -225,7 +258,10 @@ class Store {
   tracks() {
     return this.all('SELECT * FROM tracks ORDER BY sort, created_on').map((t) => ({
       id: t.id, name: t.name, kind: t.kind, pace: t.pace, deadline: t.deadline,
-      dailyTarget: t.daily_target, color: t.color, sort: t.sort, createdOn: t.created_on
+      dailyTarget: t.daily_target, color: t.color, sort: t.sort, createdOn: t.created_on,
+      weight: t.weight, meta: t.meta ? JSON.parse(t.meta) : null, currentPhase: t.current_phase,
+      phase1Hours: t.phase1_hours, phase2Hours: t.phase2_hours, phase3Hours: t.phase3_hours,
+      phase1ExamPassed: !!t.phase1_exam_passed, phase2ExamPassed: !!t.phase2_exam_passed, phase3ExamPassed: !!t.phase3_exam_passed
     }));
   }
 
@@ -243,7 +279,7 @@ class Store {
         const track = this.track(id);
         const base = basePerDay(track);
         let quota = base + row.carry;
-        if (track.kind !== 'count') quota = Math.min(quota, this.remainingBefore(id, today));
+        if (track.kind === 'topics') quota = Math.min(quota, this.remainingBefore(id, today));
         this.run('UPDATE days SET base = ?, quota = ? WHERE date = ? AND track_id = ?', [base, quota, today, id]);
       }
     }
@@ -279,14 +315,71 @@ class Store {
     if (!this.getState().startedOn) this.setState({ startedOn: today });
   }
 
+  // Topics in a phase that hasn't been unlocked yet can't be checked off.
+  topicLocked(id) {
+    const row = this.get(`SELECT s.phase AS phase, t.current_phase AS current, t.kind AS kind FROM topics x
+      JOIN sections s ON s.id = x.section_id JOIN tracks t ON t.id = x.track_id WHERE x.id = ?`, [id]);
+    return !!row && row.kind === 'phased' && row.phase > row.current;
+  }
+
   setTopicDone(id, done, now = new Date()) {
     const today = toDateStr(now);
+    if (this.topicLocked(id)) return false;
     if (done) {
       this.run('UPDATE topics SET done_date = ?, done_at = ? WHERE id = ? AND done_date IS NULL', [today, now.getTime(), id]);
       this.markStarted(today);
     } else {
       this.run('UPDATE topics SET done_date = NULL, done_at = NULL WHERE id = ?', [id]);
     }
+    return true;
+  }
+
+  // --- daily logs (phased tracks) -------------------------------------------
+  logs(trackId) { return this.all('SELECT * FROM daily_logs WHERE track_id = ? ORDER BY date', [trackId]); }
+  log(date, trackId) { return this.get('SELECT * FROM daily_logs WHERE date = ? AND track_id = ?', [date, trackId]); }
+
+  updateLog(date, trackId, patch) {
+    if (!this.log(date, trackId)) {
+      const track = this.track(trackId);
+      this.db.run('INSERT INTO daily_logs (date, track_id, phase) VALUES (?,?,?)',
+        [date, trackId, Math.min((track && track.currentPhase) || 1, 3)]);
+    }
+    const cols = Object.keys(patch).filter((k) => LOG_FIELDS.includes(k));
+    if (cols.length) {
+      this.db.run(`UPDATE daily_logs SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE date = ? AND track_id = ?`,
+        [...cols.map((c) => (typeof patch[c] === 'boolean' ? Number(patch[c]) : patch[c])), date, trackId]);
+    }
+    this.schedulePersist();
+  }
+
+  // Adds (or with a negative value, removes) study hours for a day.
+  addHours(date, trackId, hours) {
+    const current = (this.log(date, trackId) || {}).hours_studied || 0;
+    this.updateLog(date, trackId, { hours_studied: Math.max(0, Math.round((current + hours) * 1000) / 1000) });
+    if (hours > 0) this.markStarted(date);
+    this.refreshPhaseHours(trackId);
+  }
+
+  refreshPhaseHours(trackId) {
+    for (const n of [1, 2, 3]) {
+      const h = this.get('SELECT COALESCE(SUM(hours_studied), 0) AS h FROM daily_logs WHERE track_id = ? AND phase = ?', [trackId, n]).h;
+      this.run(`UPDATE tracks SET phase${n}_hours = ? WHERE id = ?`, [h, trackId]);
+    }
+  }
+
+  // Records a mock exam result. A pass (≥ passScore) unlocks the next phase.
+  recordExam(trackId, phase, score, date, passScore) {
+    const passed = score >= passScore;
+    this.updateLog(date, trackId, { mock_exam_score: score, mock_exam_passed: passed ? 1 : 0, exam_phase: phase });
+    if (passed) {
+      this.run(`UPDATE tracks SET phase${phase}_exam_passed = 1, current_phase = MAX(current_phase, ?) WHERE id = ?`, [phase + 1, trackId]);
+    }
+    return passed;
+  }
+
+  notes(from, to) {
+    return this.all(`SELECT l.date, l.track_id, l.notes, l.hours_studied, t.name FROM daily_logs l JOIN tracks t ON t.id = l.track_id
+      WHERE l.date >= ? AND l.date <= ? AND l.notes IS NOT NULL AND l.notes != '' ORDER BY l.date DESC`, [from, to]);
   }
 
   addApplication({ company, role, subject, source = 'manual', messageId = null, sentAt = Date.now() }) {
@@ -320,9 +413,17 @@ class Store {
     for (const r of this.all('SELECT done_date AS d, track_id AS t, COUNT(*) AS n FROM topics WHERE done_date >= ? AND optional = 0 GROUP BY d, t', [fromDate])) {
       map.set(`${r.d}|${r.t}`, r.n);
     }
-    const apps = this.tracks().filter((t) => t.kind === 'count');
+    const tracks = this.tracks();
+    const apps = tracks.filter((t) => t.kind === 'count');
     for (const r of this.all('SELECT date AS d, COUNT(*) AS n FROM applications WHERE date >= ? GROUP BY d', [fromDate])) {
       for (const t of apps) map.set(`${r.d}|${t.id}`, r.n);
+    }
+    // Phased tracks count completed daily "units" (hours, checklist, grammar).
+    for (const t of tracks.filter((x) => x.kind === 'phased')) {
+      for (const [k] of map) if (k.endsWith(`|${t.id}`)) map.delete(k);
+      for (const r of this.all('SELECT date, units_done FROM daily_logs WHERE track_id = ? AND date >= ?', [t.id, fromDate])) {
+        map.set(`${r.date}|${t.id}`, r.units_done);
+      }
     }
     return map;
   }
@@ -354,11 +455,11 @@ class Store {
           const idx = daysBetween(recovery.start, d);
           if (idx >= 0 && idx < recovery.extra[t.id].length) recoveryExtra = recovery.extra[t.id][idx];
         }
-        const q = nextQuota({
+        const q = t.kind === 'phased' ? { base: 1, carry: 0, quota: 1 } : nextQuota({
           base: basePerDay(t),
           prev,
           prevDayMissed: prevRows.length > 0 && prevTotal === 0,
-          remaining: t.kind === 'count' ? null : this.remainingBefore(t.id, d),
+          remaining: t.kind === 'topics' ? this.remainingBefore(t.id, d) : null,
           recoveryExtra,
           isCount: t.kind === 'count'
         });
@@ -381,15 +482,18 @@ class Store {
   history(from, to) {
     const rows = this.all('SELECT * FROM days WHERE date >= ? AND date <= ? ORDER BY date', [from, to]);
     const counts = this.doneCounts(from);
+    const logQuota = new Map(this.all('SELECT date, track_id, units_quota FROM daily_logs WHERE date >= ? AND units_quota > 0', [from])
+      .map((l) => [`${l.date}|${l.track_id}`, l.units_quota]));
     const byDate = new Map();
     for (const r of rows) {
       const done = counts.get(`${r.date}|${r.track_id}`) || 0;
+      const quota = logQuota.get(`${r.date}|${r.track_id}`) || r.quota;
       if (!byDate.has(r.date)) byDate.set(r.date, { date: r.date, tracks: {}, totalDone: 0, totalQuota: 0, complete: true });
       const day = byDate.get(r.date);
-      day.tracks[r.track_id] = { quota: r.quota, done, base: r.base, carry: r.carry };
+      day.tracks[r.track_id] = { quota, done, base: r.base, carry: r.carry };
       day.totalDone += done;
-      day.totalQuota += r.quota;
-      if (done < r.quota) day.complete = false;
+      day.totalQuota += quota;
+      if (done < quota) day.complete = false;
     }
     return [...byDate.values()];
   }

@@ -1,7 +1,8 @@
 // Seed curriculum loaded on first run.
 //
 // AI course: Apna College, Sections 34–62 (the sections still ahead).
-// German: diagnostic + three phases, A2 → B1 → B2 → C1.
+// German: Goethe C1 track in three phases (A2 → B1 → B2 → C1), 625 hours.
+// Weights set each track's share of the overall daily score.
 //
 // Shape: [title, difficulty: 'EASY' | 'MEDIUM' | 'HARD', topics: [string], options]
 // A topic can override its section difficulty with a trailing " [HARD]" etc.
@@ -112,93 +113,120 @@ const aiSections = [
   ]]
 ];
 
-const germanSections = [
-  ['Diagnostic: Einstufung', 'EASY', [
-    'Einstufungstest Grammatik', 'Einstufungstest Lesen und Hören', 'Schreibprobe', 'Sprechprobe', 'Lernplan erstellen'
-  ]],
-  // Phase 1 — A2 → B1
-  ['B1 Grammatik', 'MEDIUM', [
-    'Perfekt vs Präteritum', 'Präteritum der Modalverben', 'Nebensätze mit weil, dass, wenn',
-    'Nebensätze mit obwohl, damit, als', 'Relativsätze im Nominativ und Akkusativ', 'Relativsätze im Dativ',
-    'Reflexive Verben', 'Verben mit Präpositionen', 'Wechselpräpositionen', 'Komparativ und Superlativ',
-    'Adjektivdeklination', 'Konjunktiv II: würde, hätte, wäre', 'Indirekte Fragen', 'Futur I',
-    'Infinitiv mit zu', 'Passiv Präsens', 'Genitiv', 'Temporale Präpositionen'
-  ]],
-  ['B1 Lesen', 'EASY', [
-    'Alltagstexte und Anzeigen', 'E-Mails und Briefe', 'Kurze Zeitungsartikel', 'Meinungstexte im Forum', 'Kurzgeschichten'
-  ]],
-  ['B1 Hören', 'MEDIUM', [
-    'Durchsagen und Ansagen', 'Alltagsgespräche', 'Radiointerviews', 'Telefonnachrichten', 'Podcasts für Lernende'
-  ]],
-  ['B1 Schreiben', 'MEDIUM', [
-    'Persönliche E-Mail', 'Halbformelle E-Mail', 'Forumsbeitrag mit Meinung', 'Bitte und Entschuldigung'
-  ]],
-  ['B1 Sprechen', 'MEDIUM', [
-    'Gemeinsam etwas planen', 'Ein Thema präsentieren', 'Über eine Präsentation sprechen', 'Sich vorstellen und Small Talk'
-  ]],
-  // Phase 2 — B1 → B2
-  ['B2 Grammatik', 'HARD', [
-    'Passiv in allen Zeiten', 'Passiv mit Modalverben', 'Zustandspassiv', 'Konjunktiv II der Vergangenheit',
-    'Konjunktiv I und indirekte Rede', 'Plusquamperfekt', 'Temporale Nebensätze (nachdem, bevor, seitdem)',
-    'Konzessive Sätze (obwohl, trotzdem, dennoch)', 'Zweiteilige Konnektoren (sowohl … als auch, weder … noch)',
-    'Partizip I und II als Adjektiv', 'Nominalisierung von Verben', 'Präpositionen mit Genitiv',
-    'n-Deklination', 'Modalverben subjektiv', 'Futur II', 'Verben mit festen Präpositionen II'
-  ]],
-  ['B2 Lesen', 'MEDIUM', [
-    'Sachtexte und Berichte', 'Kommentare und Leserbriefe', 'Anleitungen und Regeln', 'Texte mit Meinungen vergleichen',
-    'Lückentexte (Sprachbausteine)'
-  ]],
-  ['B2 Hören', 'HARD', [
-    'Nachrichten und Reportagen', 'Diskussionsrunden', 'Vorträge verstehen', 'Interviews mit Expert:innen', 'Hörspiele'
-  ]],
-  ['B2 Schreiben', 'HARD', [
-    'Formelle Beschwerde', 'Forumsbeitrag argumentativ', 'Bewerbungsschreiben', 'Erörterung', 'Zusammenfassung schreiben'
-  ]],
-  ['B2 Sprechen', 'HARD', [
-    'Vortrag mit Folien', 'Argumentieren und Diskutieren', 'Gemeinsam eine Lösung finden', 'Meinung äußern und begründen'
-  ]],
-  // Phase 3 — B2 → C1
-  ['C1 Grammatik', 'HARD', [
-    'Erweiterte Partizipialattribute', 'Nominalstil vs Verbalstil', 'Konnektoren für komplexe Sätze',
-    'Konjunktiv I in Medientexten', 'Modalpartikeln', 'Funktionsverbgefüge', 'Passiversatzformen',
-    'Subjektive Modalverben in der Vergangenheit', 'Wortbildung: Präfixe und Suffixe', 'Satzbau und Informationsstruktur',
-    'Irreale Vergleichssätze (als ob)', 'Feste Redewendungen'
-  ]],
-  ['C1 Hören', 'HARD', [
-    'Wissenschaftliche Vorträge', 'Radiofeatures', 'Diskussionen mit mehreren Sprecher:innen', 'Implizite Aussagen erkennen', 'Dialekte und Umgangssprache'
-  ]],
-  ['C1 Lesen', 'HARD', [
-    'Lange Sachtexte überfliegen', 'Argumentationsstruktur analysieren', 'Die Zeit / Spiegel articles (real press)',
-    'Literarische Texte (short literary excerpts)', 'Wissenschaftliche Texte (academic reading)',
-    'Podcast/Audio comprehension (advanced)'
-  ]],
-  ['C1 Schreiben', 'HARD', [
-    'Stellungnahme (position paper)', 'Freies Schreiben / Kreatives Schreiben', 'Textoptimierung (revising own writing for style)'
-  ]],
-  ['C1 Sprechen', 'HARD', [
-    'Vortrag halten (giving a presentation)', 'Diskussion führen (leading a discussion, debate)',
-    'Spontanes Sprechen (impromptu speaking practice)'
-  ]]
+// German A2 → C1 (Goethe-Zertifikat C1). Topics are grouped into three
+// phases; each phase needs its topics done + minimum hours + a passed mock exam.
+const germanPhases = [
+  {
+    n: 1, title: 'Phase 1: A2 → B1', level: 'B1', hours: 150,
+    source: 'Grammatik aktiv, Chapters 49–80', exam: 'Goethe B1 Mock Exam',
+    sections: [
+      ['Verben 3 (Verbs Advanced)', 'MEDIUM', [
+        'Konjunktiv II (wishes, polite requests)', 'Passiv (Vorgangspassiv: werden + Partizip II)', 'Passiv with modal verbs',
+        'Verben mit Präpositionen (verbs with fixed prepositions)', 'Reflexive Verben & Reziproke Verben'
+      ]],
+      ['Nomen & Artikel 2 (Nouns Advanced)', 'MEDIUM', [
+        'n-Deklination (weak nouns)', 'Genitivattribute (possession with Genitiv)',
+        'Relativsätze (relative clauses with der/die/das)', 'Relativpronomen im Genitiv (dessen/deren)'
+      ]],
+      ['Sätze verbinden 2 (Linking Sentences)', 'MEDIUM', [
+        'Zweiteilige Konnektoren (nicht nur...sondern auch, sowohl...als auch)',
+        'Kausale/konzessive Konnektoren (obwohl, trotzdem, deshalb)',
+        'Temporale Nebensätze (als, wenn, bevor, nachdem, seit)', 'Finalsätze (um...zu, damit)', 'Indirekte Fragen (ob, W-Wort)'
+      ]],
+      ['Präpositionen 2 (Prepositions Advanced)', 'MEDIUM', [
+        'Präpositionen mit Genitiv (wegen, trotz, während)', 'Lokale Präpositionen (entlang, gegenüber, durch)',
+        'Feste Wendungen mit Präpositionen', 'Pronominaladverbien (darauf, dafür, worauf, wofür)'
+      ]],
+      ['Adjektive 2 (Adjectives Advanced)', 'MEDIUM', [
+        'Adjektivdeklination nach Nullartikel', 'Partizip I und II als Adjektive',
+        'Adjektive mit Präpositionen (stolz auf, zufrieden mit)', 'Komparation im Satz (je...desto)'
+      ]],
+      ['Wortbildung 2 (Word Formation)', 'EASY', [
+        'Nominalisierung (verbs/adjectives → nouns)', 'Vorsilben bei Verben (ver-, be-, ent-, er-, zer-)',
+        'Nachsilben (-ung, -keit, -heit, -tion, -lich, -bar)'
+      ]],
+      ['B1 Sprechen & Schreiben (Speaking & Writing)', 'MEDIUM', [
+        'Meinung äußern (expressing opinions)', 'Beschwerdebrief / formeller Brief',
+        'Diskussion & Argumentation (Redemittel)', 'Bildbeschreibung (picture description for exam)'
+      ]],
+      ['B1 Lesen & Hören (Reading & Listening)', 'EASY', [
+        'Nachrichtenleicht articles (simplified news)', 'DW Top-Thema comprehension', 'Listening strategies for Goethe B1'
+      ]]
+    ]
+  },
+  {
+    n: 2, title: 'Phase 2: B1 → B2', level: 'B2', hours: 225,
+    source: 'Claude-written grammar explanations', exam: 'Goethe B2 Mock Exam',
+    sections: [
+      ['Konjunktiv I & Indirekte Rede', 'HARD', [
+        'Konjunktiv I Bildung (formation)', 'Indirekte Rede in der Presse (reported speech)', 'Konjunktiv I vs II Unterschiede'
+      ]],
+      ['Nominalstil (Nominal Style)', 'HARD', [
+        'Verbal → Nominal Umformung', 'Funktionsverbgefüge (geben → Auskunft geben)',
+        'Nominalstil in Fachtexten (academic/formal style)'
+      ]],
+      ['Erweiterte Partizipialattribute', 'HARD', [
+        'Partizip I Attribute (die in Berlin lebende Frau)', 'Partizip II Attribute (das gestern gelesene Buch)'
+      ]],
+      ['Komplexe Satzstrukturen', 'HARD', [
+        'Infinitivkonstruktionen (ohne...zu, statt...zu)', 'Subjektlose Passivsätze (Es wird getanzt)',
+        'Modalsätze (indem, dadurch dass)', 'Konsekutivsätze (so...dass, sodass)'
+      ]],
+      ['B2 Textkompetenz', 'MEDIUM', [
+        'Zusammenfassung schreiben (text summary)', 'Erörterung (argumentative essay)',
+        'Grafik/Diagramm beschreiben (chart description)', 'Formelle E-Mail / Geschäftsbrief'
+      ]],
+      ['B2 Wortschatz & Register', 'MEDIUM', [
+        'Redewendungen & Kollokationen', 'Formal vs informal register', 'Fachsprache: Wirtschaft, Technik, Wissenschaft'
+      ]]
+    ]
+  },
+  {
+    n: 3, title: 'Phase 3: B2 → C1', level: 'C1', hours: 250,
+    source: 'Real German press + Claude exercises', exam: 'Goethe C1 Mock Exam',
+    sections: [
+      ['C1 Grammatik-Feinheiten', 'HARD', [
+        'Modalpartikeln (doch, mal, ja, halt, eben)', 'Nomen-Verb-Verbindungen (C1 level)', 'Konnektoren-Übersicht (full connector map)'
+      ]],
+      ['C1 Lesen & Medien', 'MEDIUM', [
+        'Die Zeit / Spiegel articles (real press)', 'Literarische Texte (short literary excerpts)',
+        'Wissenschaftliche Texte (academic reading)', 'Podcast/Audio comprehension (advanced)'
+      ]],
+      ['C1 Schreiben', 'HARD', [
+        'Stellungnahme (position paper)', 'Freies Schreiben / Kreatives Schreiben', 'Textoptimierung (revising own writing)'
+      ]],
+      ['C1 Sprechen', 'HARD', [
+        'Vortrag halten (giving a presentation)', 'Diskussion führen (leading a debate)', 'Spontanes Sprechen (impromptu speaking)'
+      ]]
+    ]
+  }
 ];
+
+const germanSections = germanPhases.flatMap((p) => p.sections.map(([title, difficulty, topics]) => ({ title, difficulty, topics, phase: p.n })));
+const germanMeta = {
+  target: 'Goethe-Zertifikat C1',
+  startDate: '2026-10-02',
+  phases: germanPhases.map(({ sections, ...p }) => p)
+};
 
 const toSections = (list) => list.map(([title, difficulty, topics, opts = {}]) => ({ title, difficulty, topics, optional: !!opts.optional }));
 
 // Bump when the seed changes; untouched tracks in existing databases are re-seeded.
-const VERSION = 2;
+const VERSION = 3;
 
 module.exports = {
   version: VERSION,
   tracks: [
     {
       id: 'ai', name: 'AI Course', kind: 'topics', pace: 'normal', deadline: '14:00',
-      color: '#E85D1F', sections: toSections(aiSections)
+      weight: 0.35, color: '#E85D1F', sections: toSections(aiSections)
     },
     {
-      id: 'german', name: 'German', kind: 'topics', pace: 'normal', deadline: '20:00',
-      color: '#3BA7FF', sections: toSections(germanSections)
+      id: 'german', name: 'German', kind: 'phased', pace: 'normal', deadline: '20:00', weight: 0.3,
+      startDate: germanMeta.startDate, meta: germanMeta, color: '#3BA7FF', sections: germanSections
     },
     {
-      id: 'apps', name: 'Job Applications', kind: 'count', dailyTarget: 5, deadline: '23:00',
+      id: 'apps', name: 'Job Applications', kind: 'count', dailyTarget: 5, deadline: '23:00', weight: 0.35,
       color: '#2FBF71', sections: []
     }
   ]

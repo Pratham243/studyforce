@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bar as RBar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from 'recharts';
 import { fmtDate, weekday, fmtHours } from '../lib/format';
+import { addDaysLocal } from '../lib/dates';
 
 export default function Reports({ snap }) {
   const [range, setRange] = useState(7);
@@ -18,6 +19,8 @@ export default function Reports({ snap }) {
   const worst = scored.reduce((a, d) => (!a || d.totalDone < a.totalDone ? d : a), null);
   const avg = days.length ? done.reduce((a, b) => a + b, 0) / days.length : 0;
   const rate = scored.length ? Math.round((scored.filter((d) => d.complete).length / scored.length) * 100) : 0;
+  const cutoff = addDaysLocal(snap.today, 1 - range);
+  const notes = (snap.notes || []).filter((n) => n.date >= cutoff);
   const focus = snap.pomodoro.filter((p) => days.some((d) => d.date === p.date)).reduce((a, p) => a + p.minutes, 0);
 
   const tick = { fill: 'var(--muted)', fontSize: 11 };
@@ -70,8 +73,8 @@ export default function Reports({ snap }) {
               {snap.tracks.filter((t) => t.kind !== 'count').map((t) => (
                 <tr key={t.id}>
                   <td><span className="dot" style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 4, background: t.color, marginRight: 8 }} />{t.name}</td>
-                  <td className="mono">{t.remaining}</td>
-                  <td>{t.paceInfo.label} <span className="faint small">{t.paceInfo.range}</span></td>
+                  <td className="mono">{t.kind === 'phased' ? `${Math.round(t.german.totalTarget - t.german.totalHours)} h` : t.remaining}</td>
+                  <td>{t.paceInfo.label} <span className="faint small">{t.kind === 'phased' ? `${t.paceInfo.hours} h/day` : t.paceInfo.range}</span></td>
                   <td className="mono">{t.projectedFinish ? fmtDate(t.projectedFinish, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Done'}</td>
                 </tr>
               ))}
@@ -102,6 +105,17 @@ export default function Reports({ snap }) {
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      <div className="card stack">
+        <div className="row between"><h3>Session notes</h3><span className="small muted">last {range} days</span></div>
+        {notes.length === 0 && <div className="small muted">No notes yet. Add them in the German card on the dashboard.</div>}
+        {notes.map((n) => (
+          <div key={`${n.date}-${n.track_id}`} className="stack" style={{ gap: 4, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+            <div className="small muted"><span className="mono">{fmtDate(n.date, { weekday: 'short', month: 'short', day: 'numeric' })}</span> · {n.name} · {Math.round(n.hours_studied * 10) / 10} h</div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{n.notes}</div>
+          </div>
+        ))}
       </div>
     </div>
   );

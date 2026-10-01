@@ -6,6 +6,7 @@ const { Store } = require('./lib/store');
 const { buildSnapshot, newMilestones } = require('./lib/snapshot');
 const { toDateStr, atTime } = require('./lib/dates');
 const { recoverySchedule } = require('./lib/planner');
+const { PASS_SCORE } = require('./lib/german');
 const { parseTopics } = require('./lib/topicParser');
 const notify = require('./services/notify');
 const gmail = require('./services/gmail');
@@ -301,7 +302,8 @@ function afterProgress(beforeSnap) {
   let celebrate = null;
   for (const t of snap.tracks) {
     if (t.kind === 'count') continue;
-    const fresh = newMilestones(t, reached[t.id] || []);
+    // Phased tracks celebrate passed mock exams instead of percentage milestones.
+    const fresh = t.kind === 'topics' ? newMilestones(t, reached[t.id] || []) : [];
     if (fresh.length) {
       reached[t.id] = [...(reached[t.id] || []), ...fresh];
       celebrate = { kind: 'milestone', track: t.name, value: String(Math.max(...fresh)) };
@@ -328,8 +330,51 @@ function registerIpc() {
   handle('state:get', () => buildSnapshot(store));
   handle('topic:toggle', (id, done) => {
     const before = buildSnapshot(store);
-    store.setTopicDone(id, done);
+    if (!store.setTopicDone(id, done)) throw new Error('This phase is locked until you pass the previous mock exam');
     return done ? afterProgress(before) : changed();
+  });
+
+  // Phased (German) track: hours, timer, checklist, notes, mock exams.
+  handle('german:addHours', (trackId, hours) => {
+    const before = buildSnapshot(store);
+    store.addHours(toDateStr(), trackId, Number(hours) || 0);
+    return hours > 0 ? afterProgress(before) : changed();
+  });
+  handle('german:timer', (trackId, action) => {
+    const timers = { ...(store.getState().timers || {}) };
+    if (action === 'start' && !timers[trackId]) timers[trackId] = Date.now();
+    if (action === 'stop' && timers[trackId]) {
+      const hours = (Date.now() - timers[trackId]) / 3600000;
+      delete timers[trackId];
+      store.setState({ timers });
+      const before = buildSnapshot(store);
+      store.addHours(toDateStr(), trackId, hours);
+      return afterProgress(before);
+    }
+    store.setState({ timers });
+    return changed();
+  });
+  handle('german:check', (trackId, key, value) => {
+    const before = buildSnapshot(store);
+    store.updateLog(toDateStr(), trackId, { [key]: value ? 1 : 0 });
+    if (value) store.markStarted(toDateStr());
+    return value ? afterProgress(before) : changed();
+  });
+  handle('german:notes', (trackId, notes) => { store.updateLog(toDateStr(), trackId, { notes }); return changed(); });
+  handle('german:exam', (trackId, phase, score) => {
+    const snap = buildSnapshot(store);
+    const t = snap.tracks.find((x) => x.id === trackId);
+    const ph = t && t.german && t.german.phases.find((p) => p.n === phase);
+    if (!ph || ph.exam.status !== 'available') throw new Error('This mock exam is not available yet');
+    const value = Math.max(0, Math.min(100, Math.round(Number(score))));
+    const passed = store.recordExam(trackId, phase, value, snap.today, PASS_SCORE);
+    if (passed) {
+      const celebrate = { kind: 'exam', track: t.name, value: `${ph.examName} passed · ${value}/100` };
+      showAlert('celebrate', celebrate);
+      broadcast('celebrate', celebrate);
+    }
+    changed();
+    return { passed, score: value };
   });
   handle('track:update', (id, patch) => { store.updateTrack(id, patch, toDateStr()); return changed(); });
   handle('track:delete', (id) => { store.deleteTrack(id); return changed(); });
@@ -409,7 +454,10 @@ function recoveryBacklog(snap) {
       if (id in out) out[id] += Math.max(0, r.base - r.done);
     }
   }
-  for (const t of snap.tracks) if (t.kind !== 'count') out[t.id] = Math.min(out[t.id], Math.max(0, t.remaining - t.base));
+  for (const t of snap.tracks) {
+    if (t.kind === 'phased') out[t.id] = 0; // hours can't be caught up as extra topics
+    else if (t.kind === 'topics') out[t.id] = Math.min(out[t.id], Math.max(0, t.remaining - t.base));
+  }
   return out;
 }
 
