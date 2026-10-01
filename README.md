@@ -4,16 +4,31 @@ An always-on desktop accountability app for three daily tracks: an **AI course**
 
 Built with Electron, React (Vite), SQLite (sql.js, so there are no native modules to rebuild), and Recharts.
 
-## Run it
+## Install it (recommended)
 
-Requires Node.js 18+.
+`npm start` is developer mode: the app lives inside that terminal and closes when the terminal closes. For daily use, build the installer once:
+
+```bash
+npm install
+npm run dist:win     # Windows → release/StudyForce Setup 0.1.0.exe
+# npm run dist       # or: build for the OS you're on (macOS .dmg, Linux AppImage)
+```
+
+Run `release/StudyForce Setup 0.1.0.exe` and click through the installer. Windows may show "Windows protected your PC" because the app isn't code-signed; click **More info → Run anyway**.
+
+After installing:
+- StudyForce has a desktop and Start-menu shortcut, and no terminal is needed.
+- It **starts automatically when you log in**, quietly in the tray with the desktop widget. Turn this off in Settings → General.
+- Closing the window only hides it; the owl in the system tray keeps it running. Right-click the tray owl → **Quit StudyForce** to stop it. On Windows the tray owl may be under the **^** arrow on the taskbar; drag it onto the taskbar to keep it visible.
+- To update later: `git pull`, `npm install`, then `npm run dist:win` and run the new installer. Your data is kept.
+
+## Developer mode
 
 ```bash
 npm install
 npm run dev      # Vite dev server + Electron with hot reload
-npm start        # production build, then launch
-npm run dist     # package an installer with electron-builder (output in release/)
-npm test         # planner / punishment / parser tests
+npm start        # production build, then launch (closes with the terminal)
+npm test         # planner / punishment / parser / German track tests
 ```
 
 Data is stored in `studyforce.sqlite` in Electron's user-data folder (`%APPDATA%/studyforce` on Windows, `~/Library/Application Support/studyforce` on macOS, `~/.config/studyforce` on Linux). Delete it to start over.

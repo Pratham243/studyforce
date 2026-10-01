@@ -75,6 +75,7 @@ const DEFAULT_SETTINGS = {
   alertVolume: 100,
   sirenSeconds: 5,
   widgetOnTop: true,
+  openAtLogin: true,
   wallpaperPunish: true,
   publicPosting: false,
   lofiUrl: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',

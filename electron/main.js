@@ -35,15 +35,33 @@ function load(w, route) {
 
 const webPreferences = { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false };
 
-function createMain() {
+// Launched by "open at login": start in the tray with just the widget.
+const startedHidden = process.argv.includes('--hidden');
+
+// Only an installed build registers itself; in dev it would register electron.exe.
+function applyLoginItem(enabled) {
+  if (!app.isPackaged) return;
+  app.setLoginItemSettings({ openAtLogin: !!enabled, openAsHidden: true, args: ['--hidden'] });
+}
+
+function createMain(show = true) {
   win.main = new BrowserWindow({
     width: 1280, height: 860, minWidth: 900, minHeight: 600, show: false,
     backgroundColor: '#0E0F12', title: 'StudyForce', icon: ICON, webPreferences
   });
   load(win.main, '');
-  win.main.once('ready-to-show', () => win.main.show());
+  if (show) win.main.once('ready-to-show', () => win.main.show());
   win.main.on('close', (e) => {
-    if (!runtime.quitting) { e.preventDefault(); win.main.hide(); }
+    if (runtime.quitting) return;
+    e.preventDefault();
+    win.main.hide();
+    // Closing the window only hides it; say so once so it doesn't look like a quit.
+    if (!store.getState().trayHintShown) {
+      store.setState({ trayHintShown: true });
+      if (Notification.isSupported()) {
+        new Notification({ title: 'StudyForce is still running', body: 'It keeps watching from the system tray (owl icon). Right-click it → Quit to stop.' }).show();
+      }
+    }
   });
 }
 
@@ -390,7 +408,7 @@ function registerIpc() {
   handle('settings:set', (patch) => {
     const s = store.setSettings(patch);
     if (win.widget && !win.widget.isDestroyed()) win.widget.setAlwaysOnTop(s.widgetOnTop, 'floating');
-    if (patch.openAtLogin !== undefined) app.setLoginItemSettings({ openAtLogin: !!patch.openAtLogin });
+    if (patch.openAtLogin !== undefined) applyLoginItem(patch.openAtLogin);
     return changed();
   });
 
@@ -468,7 +486,8 @@ app.whenReady().then(async () => {
   if (process.platform === 'win32') app.setAppUserModelId('app.studyforce');
   store = await Store.open(path.join(app.getPath('userData'), 'studyforce.sqlite'), { seed: curriculum });
   registerIpc();
-  createMain();
+  applyLoginItem(store.getSettings().openAtLogin);
+  createMain(!startedHidden);
   createTray();
   createWidget();
   setTimeout(tick, 3000);

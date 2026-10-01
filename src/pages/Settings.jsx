@@ -80,7 +80,7 @@ export default function Settings({ snap }) {
           </div>
           <Toggle label="Keep desktop widget on top" checked={s.widgetOnTop} onChange={(v) => set({ widgetOnTop: v })} />
           <Toggle label="Shame wallpaper on missed days" hint="Windows and macOS; Linux depends on your desktop." checked={s.wallpaperPunish} onChange={(v) => set({ wallpaperPunish: v })} />
-          <Toggle label="Start StudyForce when I log in" checked={s.openAtLogin} onChange={(v) => set({ openAtLogin: v })} />
+          <Toggle label="Start StudyForce when I log in" hint="Works in the installed app (not when started with npm start). Starts quietly in the tray with the widget." checked={s.openAtLogin} onChange={(v) => set({ openAtLogin: v })} />
           <div className="row wrap">
             <button className="sm" onClick={() => invoke('alert:test', 'nudge')}>Preview reminder</button>
             <button className="sm" onClick={() => invoke('alert:test', 'briefing')}>Preview briefing</button>

@@ -10,7 +10,8 @@
     "build": "vite build",
     "start": "vite build && electron .",
     "dist": "vite build && electron-builder",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "dist:win": "vite build && electron-builder --win"
   },
   "build": {
     "appId": "app.studyforce",
@@ -28,7 +29,33 @@
     "directories": {
       "output": "release"
     },
-    "icon": "assets/icon.png"
+    "icon": "assets/icon.png",
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "StudyForce",
+      "runAfterFinish": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Education"
+    }
   },
   "dependencies": {
     "pdf-parse": "^1.1.1",
