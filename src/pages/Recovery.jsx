@@ -20,7 +20,7 @@ export default function Recovery({ snap }) {
   useEffect(() => { invoke('recovery:preview').then(setBacklog); }, []);
   useEffect(() => {
     if (!alarm) return;
-    stop.current = playAlarm(8);
+    stop.current = playAlarm(10, snap.settings.alertVolume ?? 100);
     return () => stop.current && stop.current();
   }, [alarm]);
 

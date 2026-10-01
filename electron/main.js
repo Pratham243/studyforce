@@ -24,6 +24,8 @@ let tray = null;
 const runtime = { lastAlertAt: 0, overlayHiddenAt: 0, lastGmailPoll: 0, launchChecked: false, quitting: false };
 
 if (!app.requestSingleInstanceLock()) app.quit();
+// Reminder popups open without focus; let them play the siren anyway.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // --- windows ---------------------------------------------------------------
 function load(w, route) {

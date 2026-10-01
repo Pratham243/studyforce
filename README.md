@@ -26,6 +26,7 @@ Data is stored in `studyforce.sqlite` in Electron's user-data folder (`%APPDATA%
 | Always-on-top desktop widget (drag it anywhere; double-click opens the dashboard) | Tray → Toggle desktop widget |
 | Pace modes per track: Normal (5/day), Fast (8/day), Intensive (10/day). Finish dates update immediately | Pace switch on each track |
 | Owl alerts every 30 min (15 min once a deadline passes), with tone that escalates | Popup, bottom-right |
+| Loud siren with every reminder: a slow wail normally, a fast yelp once you're at Level 2+. Choose siren/soft/off, volume and length, and test it | Settings → General |
 | Morning briefing at wake time: today's topics and estimated hours | Popup |
 | Carry-forward: unfinished topics are added to tomorrow's count | Automatic |
 | Gmail auto-detect: polls your sent folder and logs matching emails as applications | Settings → Gmail |

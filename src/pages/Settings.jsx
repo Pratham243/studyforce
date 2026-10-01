@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '../lib/api';
+import { playAlertSound } from '../lib/sound';
 
 // Text inputs save on blur so typing doesn't write the DB on every keystroke.
 function Text({ label, value, onSave, type = 'text', placeholder }) {
@@ -49,6 +50,34 @@ export default function Settings({ snap }) {
             <Text label="Daily report at" type="time" value={s.reportTime} onSave={(v) => set({ reportTime: v })} />
           </div>
           <Toggle label="Owl reminders" hint="Every 30 min; every 15 min after a deadline passes." checked={s.alertsEnabled} onChange={(v) => set({ alertsEnabled: v })} />
+          <div className="stack" style={{ gap: 8 }}>
+            <div className="row">
+              <span className="grow">Reminder sound</span>
+              <div className="seg">
+                {[['siren', 'Siren'], ['soft', 'Soft'], ['off', 'Off']].map(([id, label]) => (
+                  <button key={id} className={s.alertSound === id ? 'on' : ''} onClick={() => set({ alertSound: id })}>{label}</button>
+                ))}
+              </div>
+            </div>
+            {s.alertSound === 'siren' && (
+              <div className="row">
+                <label className="field grow"><span>Volume <span className="mono">{s.alertVolume}%</span></span>
+                  <input type="range" min="10" max="100" step="5" value={s.alertVolume} style={{ padding: 0 }}
+                    onChange={(e) => set({ alertVolume: Number(e.target.value) })} />
+                </label>
+                <label className="field" style={{ width: 110 }}><span>Length</span>
+                  <select value={s.sirenSeconds} onChange={(e) => set({ sirenSeconds: Number(e.target.value) })}>
+                    {[3, 5, 8, 12].map((n) => <option key={n} value={n}>{n} seconds</option>)}
+                  </select>
+                </label>
+              </div>
+            )}
+            <div className="row wrap">
+              <button className="sm" onClick={() => playAlertSound(s, 1)}>🔊 Test sound</button>
+              {s.alertSound === 'siren' && <button className="sm" onClick={() => playAlertSound(s, 2)}>🚨 Test urgent siren</button>}
+              <span className="small faint">Can't be louder than your computer's volume.</span>
+            </div>
+          </div>
           <Toggle label="Keep desktop widget on top" checked={s.widgetOnTop} onChange={(v) => set({ widgetOnTop: v })} />
           <Toggle label="Shame wallpaper on missed days" hint="Windows and macOS; Linux depends on your desktop." checked={s.wallpaperPunish} onChange={(v) => set({ wallpaperPunish: v })} />
           <Toggle label="Start StudyForce when I log in" checked={s.openAtLogin} onChange={(v) => set({ openAtLogin: v })} />

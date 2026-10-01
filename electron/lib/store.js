@@ -71,6 +71,9 @@ const DEFAULT_SETTINGS = {
   sleepTime: '23:30',
   reportTime: '22:30',
   alertsEnabled: true,
+  alertSound: 'siren', // siren | soft | off
+  alertVolume: 100,
+  sirenSeconds: 5,
   widgetOnTop: true,
   wallpaperPunish: true,
   publicPosting: false,

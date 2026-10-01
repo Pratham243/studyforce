@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { api, invoke } from '../lib/api';
 import { useSnapshot, useTheme } from '../lib/useSnapshot';
 import { fmtCountdown, fmtHours, LEVEL_NAMES } from '../lib/format';
-import { playChime, playHoot } from '../lib/sound';
+import { playAlertSound, playChime } from '../lib/sound';
 import { Confetti, Difficulty } from '../components/ui';
 import Owl from '../components/Owl';
 
@@ -14,8 +14,19 @@ export default function Alert({ params }) {
   const [snap] = useSnapshot();
   useTheme(snap);
 
+  const stopSound = useRef(null);
+  const played = useRef(false);
+
+  // Sound waits for the snapshot so it can use the chosen sound and volume.
   useEffect(() => {
-    if (mode === 'celebrate') playChime(); else playHoot();
+    if (!snap || played.current) return;
+    played.current = true;
+    if (mode === 'celebrate') playChime();
+    else stopSound.current = playAlertSound(snap.settings, snap.punishment.level);
+  }, [snap, mode]);
+  useEffect(() => () => stopSound.current && stopSound.current(), []);
+
+  useEffect(() => {
     if (mode === 'briefing') return undefined;
     const t = setTimeout(close, mode === 'celebrate' ? 9000 : 25000);
     return () => clearTimeout(t);
